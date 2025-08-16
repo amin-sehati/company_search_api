@@ -21,7 +21,8 @@ API_KEY = os.getenv("API_KEY")
 
 
 # Create FastAPI app
-app = FastAPI(title="Company Search API")
+# Set root_path to "/api" so routes match when deployed behind Vercel's /api prefix
+app = FastAPI(title="Company_Search_API", root_path="/api")
 
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
