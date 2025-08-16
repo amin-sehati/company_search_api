@@ -1,9 +1,10 @@
 import os
+import secrets
 from datetime import datetime
 from typing import List, Optional, TypedDict
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
@@ -16,6 +17,7 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+API_KEY = os.getenv("API_KEY")
 
 
 # Create FastAPI app
@@ -105,6 +107,20 @@ app.add_middleware(
 )
 
 
+def require_api_key(x_api_key: Optional[str] = Header(default=None)) -> None:
+    """Validate the x-api-key header if API_KEY is configured.
+
+    If API_KEY is not set in the environment, the check is skipped (useful for local dev).
+    """
+    if not API_KEY:
+        return
+    if not x_api_key or not secrets.compare_digest(x_api_key, API_KEY):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key",
+        )
+
+
 @app.get("/")
 async def api_info():
     return {
@@ -124,7 +140,7 @@ async def health_check():
     }
 
 
-@app.post("/search")
+@app.post("/search", dependencies=[Depends(require_api_key)])
 async def search(company: Company, concept: Concept):
     return run_graph(company, concept)["companies"]
 
