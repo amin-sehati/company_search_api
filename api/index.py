@@ -21,7 +21,8 @@ API_KEY = os.getenv("API_KEY")
 
 
 # Create FastAPI app
-app = FastAPI(title="Company Search API")
+# Set root_path to "/api" so routes match when deployed behind Vercel's /api prefix
+app = FastAPI(title="Company_Search_API", root_path="/api")
 
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
@@ -67,7 +68,8 @@ class LLMCompany(BaseModel):
     logoUrl: Optional[str] = None
     description: Optional[str] = None
     industry: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
+    tagsMaster: List[str] = Field(default_factory=list)
+    naicsCode: Optional[str] = None
     stillInBusiness: Optional[bool] = None
 
 
@@ -200,7 +202,22 @@ def process_search_results(state: "GraphState") -> dict:
                     "Based on the search result provided as a whole, list 5 "
                     "companies similar to {company_name} with {company_personal_note} "
                     "and related to {company_tags} that are in the "
-                    "{concept_target_industries} industry"
+                    "{concept_target_industries} industry. "
+                    "For each company, extract and fill these fields using the search data: "
+                    "- name: Full official company name (required) "
+                    "- websiteUrl: Official company website URL (look for company homepage, corporate site) "
+                    "- wikipediaUrl: Wikipedia page URL (look for 'wikipedia.org/wiki/CompanyName') "
+                    "- linkedinUrl: LinkedIn company page URL (look for 'linkedin.com/company/') "
+                    "- logoUrl: Company logo image URL if available "
+                    "- description: Comprehensive 2-3 sentence company description including business focus, market position, and key products/services "
+                    "- industry: Specific primary industry/sector (be precise: 'Electric Vehicles', 'Cloud Computing', etc.) "
+                    "- tagsMaster: 4-6 relevant tags based on business activities, technologies, market focus "
+                    "- naicsCode: NAICS industry classification code if mentioned "
+                    "- stillInBusiness: Boolean indicating current business status. Set to FALSE if search results mention: bankruptcy, liquidation, ceased operations, "
+                    "out of business, closed down, shut down, dissolved, acquired and discontinued. Set to TRUE only if actively operating. Set to null if completely uncertain."
+                    "IMPORTANT: "
+                    "- Use actual URLs found in search results, not placeholders "
+                    "- If a field cannot be determined from search results, set it to null "
                 ),
             ),
             ("user", "{search_results}"),
